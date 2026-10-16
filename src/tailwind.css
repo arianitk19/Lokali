@@ -1,0 +1,4 @@
+/* Hyrja e Tailwind. Kompilohet në assets/css/tailwind.css me: npm run build */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
