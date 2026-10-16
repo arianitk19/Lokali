@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lokali">
+  <rect width="64" height="64" rx="16" fill="#16201A"/>
+  <path d="M22 15h8v27h14v7H22z" fill="#FAFBF8"/>
+  <circle cx="45" cy="19" r="5" fill="#EDB23A"/>
+</svg>

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lokali — Sistemi i porosive</title>
+  <meta name="description" content="Lokali: sistem porosish për kafene, restorante dhe bare, me kuzhinë në kohë reale.">
+  <meta name="theme-color" content="#16201A">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+
+  <!-- Fontet -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+
+  <!-- Stilet: Tailwind (i kompiluar) + stilet e aplikacionit -->
+  <link rel="stylesheet" href="assets/css/tailwind.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- ===================== EKRANI I HYRJES ===================== -->
+<div id="screen-auth" class="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-brand">
+      <img src="assets/img/logo.svg" alt="" width="48" height="48">
+      <div>
+        <div class="brand-name text-2xl">Lokali</div>
+        <div class="hint" id="auth-biz">Sistemi i porosive</div>
+      </div>
+    </div>
+
+    <div class="seg" role="tablist" aria-label="Hyrja">
+      <button type="button" class="seg-btn" role="tab" id="auth-tab-login" data-auth="login" aria-selected="true">Hyr</button>
+      <button type="button" class="seg-btn" role="tab" id="auth-tab-signup" data-auth="signup" aria-selected="false">Krijo llogari</button>
+    </div>
+
+    <form id="form-auth" class="grid gap-3" novalidate>
+      <div class="field" id="f-emri-wrap" hidden>
+        <label class="label" for="f-emri">Emri yt</label>
+        <input id="f-emri" class="inp" autocomplete="name" maxlength="60" placeholder="p.sh. Arben Krasniqi">
+      </div>
+      <div class="field">
+        <label class="label" for="f-email">Email</label>
+        <input id="f-email" class="inp" type="email" autocomplete="email" required placeholder="emri@shembull.com">
+      </div>
+      <div class="field">
+        <label class="label" for="f-pass">Fjalëkalimi</label>
+        <input id="f-pass" class="inp" type="password" autocomplete="current-password" required minlength="6" placeholder="të paktën 6 karaktere">
+      </div>
+      <p class="form-msg" id="auth-msg" hidden></p>
+      <button class="btn btn-primary w-full" id="btn-auth" type="submit">Hyr</button>
+    </form>
+    <p class="hint mt-4" id="auth-note">Llogaria e parë që krijohet bëhet administratori i lokalit. Punëtorët e tjerë krijojnë llogari dhe administratori i aprovon.</p>
+  </div>
+</div>
+
+<!-- Llogaria pret aprovimin -->
+<div id="screen-pending" class="gate" hidden>
+  <div class="gate-card text-center">
+    <img src="assets/img/logo.svg" alt="" width="48" height="48" class="mx-auto">
+    <h1 class="text-2xl font-extrabold mt-4">Llogaria pret aprovimin</h1>
+    <p class="hint mt-2">Je regjistruar si <b id="pending-email"></b>. Administratori i lokalit duhet të të aprovojë dhe të të caktojë rolin te <b>Menaxhimi → Stafi</b>.</p>
+    <div class="flex gap-2 justify-center mt-6">
+      <button class="btn btn-ghost" id="btn-pending-logout" type="button">Dil</button>
+      <button class="btn btn-primary" id="btn-pending-check" type="button">Kontrollo sërish</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mungon konfigurimi -->
+<div id="screen-nocfg" class="gate" hidden>
+  <div class="gate-card">
+    <h1 class="text-2xl font-extrabold">Lidhja me databazën mungon</h1>
+    <p class="hint mt-2">Plotëso <code>SUPABASE_URL</code> dhe <code>SUPABASE_ANON_KEY</code> te skedari <code>assets/js/config.js</code>. Vlerat gjenden te Supabase → Project Settings → API Keys.</p>
+  </div>
+</div>
+
+<!-- ===================== APLIKACIONI ===================== -->
+<div id="screen-app" hidden>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <div class="brand">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="38" height="38">
+      <div class="min-w-0">
+        <div class="brand-name" id="biz-name">Lokali</div>
+        <div class="brand-sub" id="biz-sub">Sistemi i porosive</div>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Pamjet">
+      <button class="tab" role="tab" data-view="salla" id="tab-salla">Salla</button>
+      <button class="tab" role="tab" data-view="kuzhina" id="tab-kuzhina">Kuzhina <span class="cnt" id="cnt-kuzhina">0</span></button>
+      <button class="tab" role="tab" data-view="arka" id="tab-arka">Arka <span class="cnt" id="cnt-arka">0</span></button>
+      <button class="tab" role="tab" data-view="menaxhimi" id="tab-menaxhimi">Menaxhimi <span class="cnt" id="cnt-stafi" data-zero="true">0</span></button>
+      <button class="tab" role="tab" data-view="aktiviteti" id="tab-aktiviteti">Aktiviteti</button>
+    </nav>
+    <div class="hdr-right">
+      <span id="conn" class="conn" title="Gjendja e lidhjes live"><span class="dot"></span><span id="conn-txt">Duke u lidhur…</span></span>
+      <span class="user-chip" title="Llogaria jote"><span id="me-name"></span><span class="role" id="me-role"></span></span>
+      <button id="btn-logout" class="icon-btn" aria-label="Dil" title="Dil">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== SALLA ===================== -->
+  <section id="view-salla" class="wrap view" hidden>
+    <div class="salla-grid">
+      <div class="min-w-0 grid gap-4">
+        <div class="panel">
+          <div class="panel-h"><h2>Tavolinat</h2><span class="hint">Zgjidh tavolinën për porosinë</span></div>
+          <div id="tables" class="tables"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h">
+            <h2>Menuja</h2>
+            <input id="search" class="search" type="search" placeholder="Kërko produkt…" autocomplete="off" aria-label="Kërko produkt">
+          </div>
+          <div id="cats" class="chips"></div>
+          <div id="menu" class="menu-grid"></div>
+        </div>
+      </div>
+
+      <aside class="bona-col min-w-0 grid gap-4 pt-2">
+        <div class="ticket bona">
+          <div class="bona-h">
+            <h2 id="bona-title">Bonë e re</h2>
+            <span class="label" id="bona-sub">Pa tavolinë</span>
+          </div>
+          <ul id="bona-items" class="bona-items"></ul>
+          <label class="label block mt-1 mb-1.5" for="notes">Shënime për kuzhinën</label>
+          <textarea id="notes" class="notes" rows="2" maxlength="300" placeholder="p.sh. pa sheqer, pa qepë…"></textarea>
+          <div class="bona-total">
+            <span class="label">Totali</span>
+            <span class="amt" id="bona-total">0,00 €</span>
+          </div>
+          <div class="flex gap-2 mt-3">
+            <button class="btn btn-ghost" id="btn-clear" type="button">Pastro</button>
+            <button class="btn btn-primary flex-1" id="btn-send" type="button" disabled>Dërgo në kuzhinë</button>
+          </div>
+        </div>
+        <div class="panel" id="table-orders-panel" hidden>
+          <div class="panel-h"><h2 id="table-orders-title">Porositë e hapura</h2></div>
+          <div id="table-orders" class="grid gap-2"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== KUZHINA ===================== -->
+  <section id="view-kuzhina" class="wrap view" hidden>
+    <div class="flex items-end justify-between gap-3 flex-wrap mb-4">
+      <div>
+        <h1 class="text-2xl font-extrabold">Kuzhina</h1>
+        <p class="hint">Bonat shfaqen sapo kamarieri i dërgon. Koha tregon sa minuta kanë kaluar nga porosia.</p>
+      </div>
+      <div class="hint num" id="kitchen-clock"></div>
+    </div>
+    <div class="kanban">
+      <div class="col"><div class="col-h"><h3><span class="bar" style="background:var(--info)"></span>Të reja</h3><span class="num hint" id="n-e_re">0</span></div><div class="col-list" id="col-e_re"></div></div>
+      <div class="col"><div class="col-h"><h3><span class="bar" style="background:var(--accent)"></span>Në përgatitje</h3><span class="num hint" id="n-ne_pergatitje">0</span></div><div class="col-list" id="col-ne_pergatitje"></div></div>
+      <div class="col"><div class="col-h"><h3><span class="bar" style="background:var(--ok)"></span>Gati për shërbim</h3><span class="num hint" id="n-gati">0</span></div><div class="col-list" id="col-gati"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== ARKA ===================== -->
+  <section id="view-arka" class="wrap view" hidden>
+    <div class="mb-4">
+      <h1 class="text-2xl font-extrabold">Arka</h1>
+      <p class="hint">Shifrat e sotme, të llogaritura direkt nga databaza.</p>
+    </div>
+    <div class="kpis">
+      <div class="kpi hl"><div class="label">Xhiro sot</div><div class="v" id="k-xhiro">0,00 €</div></div>
+      <div class="kpi"><div class="label">Porosi të paguara</div><div class="v" id="k-paguar">0</div></div>
+      <div class="kpi"><div class="label">Mesatarja për porosi</div><div class="v" id="k-mes">0,00 €</div></div>
+      <div class="kpi"><div class="label">Porosi të hapura</div><div class="v" id="k-aktive">0</div></div>
+    </div>
+    <div class="arka-grid">
+      <div class="grid gap-4 min-w-0">
+        <div class="panel">
+          <div class="panel-h"><h2>Për pagesë</h2><span class="hint">Porositë gati ose të shërbyera</span></div>
+          <div id="pay-list"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h2>Të mbyllura sot</h2><span class="hint" id="closed-sum"></span></div>
+          <div id="closed-list"></div>
+        </div>
+      </div>
+      <div class="grid gap-4 min-w-0">
+        <div class="panel">
+          <div class="panel-h"><h2>Shitjet sipas orës</h2><span class="hint">Sot, porositë e paguara</span></div>
+          <div id="hours" class="hours"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h2>Më të shiturat</h2><span class="hint">Gjithë koha</span></div>
+          <div id="top"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MENAXHIMI ===================== -->
+  <section id="view-menaxhimi" class="wrap view" hidden>
+    <div class="mb-4">
+      <h1 class="text-2xl font-extrabold">Menaxhimi</h1>
+      <p class="hint">Çdo ndryshim ruhet në databazë dhe shfaqet menjëherë në të gjitha pajisjet.</p>
+    </div>
+    <div class="mgmt-grid">
+      <!-- Lokali -->
+      <div class="panel">
+        <div class="panel-h"><h2>Lokali</h2></div>
+        <form id="form-lokali" class="grid gap-3" novalidate>
+          <div class="field"><label class="label" for="m-lokali-emri">Emri i lokalit</label><input id="m-lokali-emri" class="inp" maxlength="60" required></div>
+          <div class="field"><label class="label" for="m-lokali-adresa">Adresa</label><input id="m-lokali-adresa" class="inp" maxlength="120" placeholder="p.sh. Rr. Nënë Tereza, Prishtinë"></div>
+          <div><button class="btn btn-primary btn-sm" type="submit">Ruaj</button></div>
+        </form>
+      </div>
+
+      <!-- Stafi -->
+      <div class="panel">
+        <div class="panel-h"><h2>Stafi</h2><span class="hint">Punëtorët krijojnë llogari te faqja e hyrjes</span></div>
+        <div id="staff-list" class="mlist"></div>
+      </div>
+
+      <!-- Tavolinat -->
+      <div class="panel">
+        <div class="panel-h"><h2>Tavolinat</h2><span class="hint" id="m-tables-count"></span></div>
+        <form id="form-tavolina" class="frow" novalidate>
+          <div class="field"><label class="label" for="m-tav-numri">Numri</label><input id="m-tav-numri" class="inp" type="number" min="1" max="999" required></div>
+          <div class="field"><label class="label" for="m-tav-vende">Vende</label><input id="m-tav-vende" class="inp" type="number" min="1" max="30" value="4" required></div>
+          <div class="field frow-btn"><button class="btn btn-primary btn-sm" type="submit" id="m-tav-submit">Shto</button><button class="btn btn-ghost btn-sm" type="button" id="m-tav-cancel" hidden>Anulo</button></div>
+        </form>
+        <div id="m-tables" class="mlist mt-3"></div>
+      </div>
+
+      <!-- Kategoritë -->
+      <div class="panel">
+        <div class="panel-h"><h2>Kategoritë</h2></div>
+        <form id="form-kategoria" class="frow" novalidate>
+          <div class="field grow"><label class="label" for="m-kat-emri">Emri</label><input id="m-kat-emri" class="inp" maxlength="40" required placeholder="p.sh. Kafe"></div>
+          <div class="field"><label class="label" for="m-kat-rend">Renditja</label><input id="m-kat-rend" class="inp" type="number" value="0" style="width:84px"></div>
+          <div class="field frow-btn"><button class="btn btn-primary btn-sm" type="submit" id="m-kat-submit">Shto</button><button class="btn btn-ghost btn-sm" type="button" id="m-kat-cancel" hidden>Anulo</button></div>
+        </form>
+        <div id="m-cats" class="mlist mt-3"></div>
+      </div>
+
+      <!-- Produktet -->
+      <div class="panel mgmt-wide">
+        <div class="panel-h"><h2>Produktet</h2><span class="hint" id="m-prod-count"></span></div>
+        <form id="form-produkti" class="frow" novalidate>
+          <div class="field grow"><label class="label" for="m-prod-emri">Emri</label><input id="m-prod-emri" class="inp" maxlength="60" required placeholder="p.sh. Makiato e madhe"></div>
+          <div class="field"><label class="label" for="m-prod-kat">Kategoria</label><select id="m-prod-kat" class="inp" required></select></div>
+          <div class="field"><label class="label" for="m-prod-cmimi">Çmimi (€)</label><input id="m-prod-cmimi" class="inp" type="text" inputmode="decimal" required placeholder="1,50" style="width:110px"></div>
+          <div class="field"><label class="label" for="m-prod-stoku">Stoku</label><input id="m-prod-stoku" class="inp" type="number" min="0" step="1" placeholder="pa kufi" style="width:110px"></div>
+          <div class="field frow-btn"><button class="btn btn-primary btn-sm" type="submit" id="m-prod-submit">Shto</button><button class="btn btn-ghost btn-sm" type="button" id="m-prod-cancel" hidden>Anulo</button></div>
+        </form>
+        <p class="hint mt-2">Lëre stokun bosh për produktet pa kufi, si kafeja. Kur vendos numër, sistemi e ul vetë me çdo porosi dhe e ndalon shitjen kur mbaron.</p>
+        <div id="m-prods" class="mt-3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== AKTIVITETI ===================== -->
+  <section id="view-aktiviteti" class="wrap view" hidden>
+    <div class="mb-4">
+      <h1 class="text-2xl font-extrabold">Aktiviteti live</h1>
+      <p class="hint">Çdo ndryshim në databazë, nga çdo pajisje, shfaqet këtu sapo ndodh.</p>
+    </div>
+    <div class="db-grid">
+      <div class="panel min-w-0">
+        <div class="panel-h"><h2>Ngjarjet</h2><button class="btn btn-ghost btn-sm" id="btn-clear-log" type="button">Pastro</button></div>
+        <ul id="log" class="log"></ul>
+      </div>
+      <div class="panel min-w-0">
+        <div class="panel-h"><h2>Si funksionon databaza</h2><span class="hint">database/schema.sql</span></div>
+        <div class="obj"><h3>Rolet dhe siguria</h3><p>Çdo punëtor ka llogari në Supabase Auth. Trigger-i <code>trg_stafi_i_ri</code> mbi <code>auth.users</code> e regjistron në <code>stafi</code>. Llogaria e parë bëhet admin, të tjerat presin aprovimin. RLS lejon leximin vetëm për stafin aktiv, dhe funksionet kontrollojnë rolin me <code>kerko_rolin()</code>.</p></div>
+        <div class="obj"><h3>Trigger-at e porosive</h3><p><code>trg_artikulli_para_insert</code> kontrollon dhe ul stokun me <code>FOR UPDATE</code>. <code>trg_rillogarit_totalin</code> rillogarit totalin. <code>trg_porosia_para_update</code> lejon vetëm kalime të vlefshme statusi. <code>trg_porosia_pas_update</code> shkruan historikun (kush, kur), kthen stokun kur anulohet dhe liron tavolinën.</p></div>
+        <div class="obj"><h3>Transaksionet</h3><p><code>krijo_porosi()</code> fut porosinë dhe artikujt në një transaksion: nëse një artikull s'ka stok, asgjë nuk ruhet.</p></div>
+        <div class="obj"><h3>Fshirja e butë</h3><p>Një produkt ose tavolinë që ka histori shitjesh nuk fshihet, por çaktivizohet, që raportet e vjetra të mbeten të sakta.</p></div>
+        <div class="obj"><h3>View-at</h3><p><code>v_porosite_aktive</code> (JSON aggregate), <code>v_raporti_sot</code> (FILTER), <code>v_produktet_top</code> (RANK, PARTITION BY), <code>v_shitjet_ditore</code> (SUM OVER), <code>v_porosite_sot</code>.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<!-- Libraria e Supabase (klienti JavaScript) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+<!-- Aplikacioni (vanilla JavaScript, renditja ka rëndësi) -->
+<script src="assets/js/config.js"></script>
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/db.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
